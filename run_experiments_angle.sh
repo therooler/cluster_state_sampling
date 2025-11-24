@@ -31,7 +31,7 @@ if [ -z "$seed" ]; then
 fi
 echo "[INFO] Seed $seed"
 ### Define the list of N values (system sizes). Modify as needed.
-Ns=(2 4 6 8 10 12 14 16 18 20 22 24 26 28)
+Ns=(2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
 
 # Use SLURM_ARRAY_TASK_ID to index into Ns. If not set, default to 0 (useful for direct testing).
 idx=${SLURM_ARRAY_TASK_ID:-0}

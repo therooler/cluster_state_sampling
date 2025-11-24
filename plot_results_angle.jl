@@ -67,7 +67,7 @@ function plot_angle_results(data_dir::AbstractString="data", out_prefix::Abstrac
     rows = load_angle_results(data_dir)
     isempty(rows) && error("No per-angle CSV results found in $(data_dir). Expected files named like L{L}_D{D}*.csv with header containing angle,mean,std")
 
-    seed_list = [100, 200, 300, 400, 500, 600, 700, 800,900,1000]
+    seed_list = [100, 200]
     if seed_list !== nothing
         # Filter rows to only include requested seeds
         rows = filter(r -> !(ismissing(r[:seed])) && in(r[:seed], seed_list), rows)
@@ -156,7 +156,7 @@ function plot_angle_results(data_dir::AbstractString="data", out_prefix::Abstrac
         plot!(ylim=(min_val, 1.0), yscale=:log10)
         xlabel!(plt_mean[i], "angle")
         ylabel!(plt_mean[i], "mean")
-        title!(plt_mean[i], @sprintf("L=%d - %d seeds", L, length(seed_list)))
+        title!(plt_mean[i], @sprintf("L=%d - %d seeds", L, n_seeds))
     end
 
     # Std plot
@@ -184,7 +184,7 @@ function plot_angle_results(data_dir::AbstractString="data", out_prefix::Abstrac
         xlabel!(plt_std[i], "angle (rad)")
         ylabel!(plt_std[i], "std")
         plot!(ylim=[0,20])
-        title!(plt_std[i], @sprintf("L=%d - %d seeds", L, length(seed_list)))
+        title!(plt_std[i], @sprintf("L=%d - %d seeds", L, n_seeds))
     end
 
     # add a title mentioning how many seeds were used
