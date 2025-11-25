@@ -46,8 +46,8 @@ Outputs
 - Prints mean and std of the sampled statistic to stdout
 - If output_dir is set, writes a 1-row CSV with columns: metric,mean,std
 """
-function main_certify(L::Int, sampling_bond_dimension::Int, certification_bond_dimension::Int, nsamples::Int = 1000, 
-	seed::Union{Nothing, Int} = nothing; output_dir::Union{Nothing, String} = nothing,
+function main_certify(L::Int, certification_bond_dimension::Int, nsamples::Int = 1000, 
+	seed::Union{Nothing, Int} = nothing; data_dir::Union{Nothing, String} = nothing,
 	output_dir_R::Union{Nothing, String} = nothing)
 	# Ensure deterministic randomness if seed is set (no environment fallback).
 	if seed !== nothing
@@ -64,7 +64,7 @@ function main_certify(L::Int, sampling_bond_dimension::Int, certification_bond_d
 		@info "Output data exists at: $(output_dir_R). Skipping experiment."
 		return
 	end
-	if !isfile(output_dir * "/stats_1.57080.csv")
+	if !isfile(data_dir * "/stats_1.57080.csv")
 		@info "Sample data does not exist exists at: $(output_dir). Skipping experiment."
 		return
 	end
@@ -91,12 +91,12 @@ function main_certify(L::Int, sampling_bond_dimension::Int, certification_bond_d
 	angles = collect(range(0, stop = pi/2, length = 20))
 
 	for ang in angles
-		output_bitstrings = joinpath(output_dir, @sprintf("bitstrings_%0.5f.json", ang))
+		output_bitstrings = joinpath(data_dir, @sprintf("bitstrings_%0.5f.json", ang))
 		bitstrings = Vector{Dictionary{Tuple{Int64, Int64}, Int64}}
-		open(output_bitstrings) do f
+		open(output_bitstrings, "r") do f
 			bitstrings = JSON3.read(f, Vector{Dictionary{Tuple{Int64, Int64}, Int64}});
 		end
-		output_stats = joinpath(output_dir, @sprintf("stats_%0.5f.csv", ang))
+		output_stats = joinpath(data_dir, @sprintf("stats_%0.5f.csv", ang))
 		poverqs = ComplexF64[]
 		logqs = Float64[]
 		open(output_stats, "r") do io
@@ -138,10 +138,7 @@ function main_certify(L::Int, sampling_bond_dimension::Int, certification_bond_d
 		R = 10
 		outs = TN.certify_samples(ψ_rotated, probs_and_bitstrings; certification_mps_bond_dimension = certification_bond_dimension, symmetrize_and_normalize = false)
 		certified_poverq = [o.poverq for o in outs]
-		# error("HRE")
-		# 	poverqs = getfield.(outs, :poverq)
-		# logqs = getfield.(outs, :logq)
-		# bitstrings = getfield.(outs, :bitstring)
+
 		if output_dir_R !== nothing
 			# use the loop variable `ang`; format to 3 decimal places
 			output_stats = joinpath(output_dir_R, @sprintf("stats_%0.5f.csv", ang))

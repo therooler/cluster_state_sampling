@@ -125,11 +125,6 @@ function main_sample(L::Int, mps_bond_dimension::Int, nsamples::Int = 1000, seed
 
 			output_bitstrings = joinpath(output_dir, @sprintf("bitstrings_%0.5f.json", ang))
 			JSON3.write(output_bitstrings, bitstrings)
-			# open(output_bitstrings) do f
-			# o = JSON3.read(f, Vector{Dictionary{Tuple{Int64, Int64}, Int64}});
-			# println(o)
-			# end
-
 
 			println("Saved results to: $(output_dir)")
 		end

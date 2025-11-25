@@ -11,13 +11,15 @@ cd "$SCRIPT_DIR"
 mkdir -p data
 
 # Comma-separated lists (override by exporting L_LIST and D_LIST)
-L_LIST=${L_LIST:-"2,3"}
-D_LIST=${D_LIST:-"4,8"}
-NSAMPLES=${NSAMPLES:-100}
-OUTDIR=${OUTDIR:-data}
+L_LIST=$1
+D_LIST=$2
+NSAMPLES=$3
+SEED=$4
+OUTDIR=$5
 
-echo "[INFO] Batch run: L_LIST=$L_LIST D_LIST=$D_LIST NSAMPLES=$NSAMPLES OUTDIR=$OUTDIR"
+echo "[INFO] Batch run: L_LIST=$L_LIST D_LIST=$D_LIST NSAMPLES=$NSAMPLES SEED=$SEED OUTDIR=$OUTDIR"
 
-julia --project=. batch_experiments.jl "$L_LIST" "$D_LIST" "$NSAMPLES" "$OUTDIR"
+julia --project=. batch_experiments.jl "$L_LIST" "$D_LIST" "certify" "$NSAMPLES" "$SEED" "$OUTDIR" 4
+# julia --project=. batch_experiments.jl "$L_LIST" "$D_LIST" "sample" "$NSAMPLES" "$SEED" "$OUTDIR"
 
 echo "[INFO] Done. CSVs in $OUTDIR"

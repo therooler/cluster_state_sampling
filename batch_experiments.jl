@@ -61,7 +61,7 @@ function batch_main_certify(Ls::Vector{Int}, Ds::Vector{Int}, Rs::Vector{Int}; n
 				try
 					# We set the RNG once above for reproducibility across the batch.
 					# Pass seed=nothing to avoid re-seeding per run.
-					main_certify(L, D, R, nsamples, seed; output_dir = outfile, output_dir_R=outfile_R)
+					main_certify(L, R, nsamples, seed; data_dir = outfile, output_dir_R=outfile_R)
 				catch err
 					@error "Experiment failed" L D exception=(err, catch_backtrace())
 				end
@@ -74,18 +74,17 @@ if abspath(PROGRAM_FILE) == @__FILE__
 	if length(ARGS) < 2
 		println("Usage: julia --project=. batch_experiments.jl \"L_list\" \"D_list\" \"sample_or_certify\" [nsamples] [seed] [output_dir] ")
 		println("Example: julia --project=. batch_experiments.jl \"2,3\" \"4,8\" 10 12345 data")
-		# tiny default
 	else
 		Ls = parse_list(ARGS[1])
 		Ds = parse_list(ARGS[2])
-		sample_or_certify = parse_list(ARGS[3])
+		sample_or_certify = ARGS[3]
 		nsamples = length(ARGS) >= 4 ? parse(Int, ARGS[4]) : 1000
-		seed = length(ARGS) >= 5 ? parse(Int, ARGS[6]) : nothing
+		seed = length(ARGS) >= 5 ? parse(Int, ARGS[5]) : nothing
 		outdir = length(ARGS) >= 6 ? ARGS[6] : "data"
 		if sample_or_certify=="sample"
 			batch_main_sample(Ls, Ds; nsamples = nsamples, outdir = outdir, seed = seed)
 		elseif sample_or_certify=="certify"
-			if length(ARGS!=7)
+			if length(ARGS)!=7
 				println("ARGS[7] must contain Rs for \"certify\"")
 			else
 				Rs = parse_list(ARGS[7])
