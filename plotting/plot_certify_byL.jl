@@ -257,6 +257,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
     end
     data_root = ARGS[1]
     out_dir = length(ARGS) >= 2 ? ARGS[2] : "figures"
-    # plot_grid_by_LD(data_root, out_dir)
+    plot_grid_by_LD(data_root, out_dir)
     plot_grid_by_R(data_root, out_dir)
 end
