@@ -136,8 +136,11 @@ function main_certify(L::Int, certification_bond_dimension::Int, nsamples::Int =
 			@info "Put state on GPU"
 		end
 		R = 10
-		outs = TN.certify_samples(ψ_rotated, probs_and_bitstrings; certification_mps_bond_dimension = certification_bond_dimension, symmetrize_and_normalize = false)
+		# time the certification sampling call and log elapsed time
+		t = @timed outs = TN.certify_samples(ψ_rotated, probs_and_bitstrings; 
+			certification_mps_bond_dimension = certification_bond_dimension, symmetrize_and_normalize = false)
 		certified_poverq = [o.poverq for o in outs]
+		@info "certify_samples elapsed" elapsed_seconds = t.time
 
 		if output_dir_R !== nothing
 			# use the loop variable `ang`; format to 3 decimal places

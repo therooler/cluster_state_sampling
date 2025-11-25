@@ -108,8 +108,11 @@ function main_sample(L::Int, mps_bond_dimension::Int, nsamples::Int = 1000, seed
 
 			@info "Put state on GPU"
 		end
-		outs = sample_custom(ψ_rotated, nsamples; norm_mps_bond_dimension = 1,
+		# time the sampling call and log elapsed time
+		t = @timed outs = sample_custom(ψ_rotated, nsamples; norm_mps_bond_dimension = 1,
 			projected_mps_bond_dimension = mps_bond_dimension, certification_mps_bond_dimension = mps_bond_dimension, gauge = false)
+		@info "sample_custom elapsed" elapsed_seconds = t.time
+		
 		poverqs = getfield.(outs, :poverq)
 		logqs = getfield.(outs, :logq)
 		bitstrings = getfield.(outs, :bitstring)
