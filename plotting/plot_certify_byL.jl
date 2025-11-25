@@ -176,6 +176,80 @@ function plot_grid_by_LD(data_root::AbstractString = "data", out_dir::AbstractSt
     println("Saved: ", outpng)
 end
 
+
+"""Plot certified p_over_q vs angle for each R as a grid with rows = L and columns = D.
+
+Usage:
+  plot_grid_by_R("data", "figures/certify_byR")
+"""
+function plot_grid_by_R(data_root::AbstractString = "data", out_dir::AbstractString = "figures/certify_byR")
+    nested = collect_nested(data_root)
+    isempty(nested) && error("No data found under ", data_root)
+    mkpath(out_dir)
+
+    Ls = sort(collect(keys(nested)))
+    Ds_set = Set{Int}()
+    for L in Ls
+        for D in keys(nested[L])
+            push!(Ds_set, D)
+        end
+    end
+    Ds = sort(collect(Ds_set))
+
+    # collect all R values present anywhere
+    Rs_set = Set{Float64}()
+    for L in Ls, D in Ds
+        for R in keys(nested[L][D])
+            push!(Rs_set, R)
+        end
+    end
+    Rs = sort(collect(Rs_set))
+    isempty(Rs) && return
+
+    for R in Rs
+        nrows = max(1, length(Ls)); ncols = max(1, length(Ds))
+        plt = plot(layout = (nrows, ncols), size = (600*ncols, 500*nrows),
+                   left_margin = 25mm, right_margin = 10mm, top_margin = 10mm, bottom_margin = 10mm,
+                   xtickfont = font(18), tickfont = font(15), guidefont = font(16))
+
+        for (iL, L) in enumerate(Ls)
+            for (jD, D) in enumerate(Ds)
+                idx = (iL - 1) * ncols + jD
+                ax = plt[idx]
+                xlabel!(ax, "angle (rad)", fontsize=font(18))
+                ylabel!(ax, "p/q", fontsize=font(18))
+                title!(ax, @sprintf("L=%d  D=%d", L, D))
+
+                # gather angle -> mean for this L,D,R by scanning files under L/D
+                angles = Float64[]; means = Float64[]
+                sample_dir = joinpath(data_root, @sprintf("L%d", L), @sprintf("D%d", D))
+                for (root, dirs, files) in walkdir(sample_dir)
+                    occursin(@sprintf("R%d", Int(R)), root) || continue
+                    for f in files
+                        startswith(f, "stats_") || continue
+                        a = parse_angle_from_filename(basename(f))
+                        a === nothing && continue
+                        m = read_mean_certified(joinpath(root, f))
+                        isnan(m) && continue
+                        push!(angles, a); push!(means, m)
+                    end
+                end
+
+                isempty(angles) && continue
+                order = sortperm(angles)
+                a_s = angles[order]; m_s = means[order]
+                plot!(ax, a_s, m_s, label = false, marker = :circle)
+                plot!(ax, yscale = :log10, ylim = (1e-1, 1e3))
+                plot!(ax, xlim = (0, pi/2), xticks = ([0, pi/4, pi/2], [L"0", L"\frac{\pi}{4}", L"\frac{\pi}{2}"]))
+            end
+        end
+
+        outpng = joinpath(out_dir, @sprintf("certify_byR_R%d.png", Int(R)))
+        savefig(plt, outpng)
+        println("Saved: ", outpng)
+    end
+end
+
 if abspath(PROGRAM_FILE) == @__FILE__
     if length(ARGS) < 1
         println("Usage: julia --project=. plotting/plot_certify_byL.jl <data_root> [out_dir]")
@@ -183,5 +257,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
     end
     data_root = ARGS[1]
     out_dir = length(ARGS) >= 2 ? ARGS[2] : "figures"
-    plot_grid_by_LD(data_root, out_dir)
+    # plot_grid_by_LD(data_root, out_dir)
+    plot_grid_by_R(data_root, out_dir)
 end
