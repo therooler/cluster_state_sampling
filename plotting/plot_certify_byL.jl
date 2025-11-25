@@ -218,22 +218,22 @@ function plot_grid_by_R(data_root::AbstractString = "data", out_dir::AbstractStr
     end
     Rs = sort(collect(Rs_set))
     isempty(Rs) && return
-    # For each R, create one figure per R with rows = L and a single column.
-    # Within each subplot (fixed L) plot different D series together.
+    # Create a single figure per mode with rows = L and columns = R.
+    # Each subplot (L,R) contains series for different D values.
     for mode in ["mean", "std"]
-        for R in Rs
-            nrows = max(1, length(Ls)); ncols = 1
-            plt = plot(layout = (nrows, ncols), size = (500, 400*nrows),
-                       left_margin = 25mm, right_margin = 10mm, top_margin = 10mm, bottom_margin = 10mm,
-                       xtickfont = font(18), tickfont = font(15), guidefont = font(16))
+        nrows = max(1, length(Ls)); ncols = max(1, length(Rs))
+        plt = plot(layout = (nrows, ncols), size = (600*ncols, 600*nrows),
+                   left_margin = 25mm, right_margin = 10mm, top_margin = 10mm, bottom_margin = 10mm,
+                   xtickfont = font(14), tickfont = font(12), guidefont = font(14))
 
-            for (iL, L) in enumerate(Ls)
-                ax = plt[iL]
-                xlabel!(ax, "angle (rad)", fontsize=font(18))
-                ylabel!(ax, @sprintf("%s p/q", mode), fontsize=font(18))
-                title!(ax, @sprintf("L=%d", L))
+        for (iL, L) in enumerate(Ls)
+            for (jR, R) in enumerate(Rs)
+                idx = (iL - 1) * ncols + jR
+                ax = plt[idx]
+                xlabel!(ax, "angle (rad)", fontsize=font(12))
+                ylabel!(ax, @sprintf("%s p/q", mode), fontsize=font(12))
+                title!(ax, @sprintf("L=%d  R=%d", L, Int(R)))
 
-                # For this L and R, plot series for each D on the same axes
                 any_plotted = false
                 for D in Ds
                     # gather angle -> mean and std for this L,D,R by scanning files under L/D
@@ -270,11 +270,11 @@ function plot_grid_by_R(data_root::AbstractString = "data", out_dir::AbstractStr
                     plot!(ax, legend = :best)
                 end
             end
-
-            outpng = joinpath(out_dir, @sprintf("%s_R%d.png", mode, Int(R)))
-            savefig(plt, outpng)
-            println("Saved: ", outpng)
         end
+
+        outpng = joinpath(out_dir, @sprintf("%s_grid_LxR.png", mode))
+        savefig(plt, outpng)
+        println("Saved: ", outpng)
     end
 end
 
