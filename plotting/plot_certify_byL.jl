@@ -41,11 +41,18 @@ function read_mean_certified(filepath::AbstractString)
             push!(vals, parse(Float64, m.captures[1]))
         end
     end
-    return isempty(vals) ? NaN : mean(vals)
+    if isempty(vals)
+        return (NaN, NaN)
+    else
+        μ = Statistics.mean(vals)
+        σ = length(vals) > 1 ? Statistics.std(vals) : 0.0
+        return (μ, σ)
+    end
 end
 
 function collect_nested(data_root::AbstractString)
-    nested = Dict{Int, Dict{Int, Dict{Float64, Vector{Float64}}}}()
+    # nested[L][D][R][angle] = Vector{Float64} of per-seed values (we'll average these)
+    nested = Dict{Int, Dict{Int, Dict{Float64, Dict{Float64, Vector{Float64}}}}}()
     for (root, dirs, files) in walkdir(data_root)
         for f in files
             startswith(f, "stats_") || continue
@@ -60,18 +67,22 @@ function collect_nested(data_root::AbstractString)
             end
             (L === nothing || D === nothing || R === nothing) && continue
             m = read_mean_certified(joinpath(root, f))
-            isnan(m) && continue
-            get!(nested, L, Dict{Int, Dict{Float64, Vector{Float64}}}())
-            get!(nested[L], D, Dict{Float64, Vector{Float64}}())
-            get!(nested[L][D], R, Float64[])
-            push!(nested[L][D][R], m)
+            μ = m[1]
+            isnan(μ) && continue
+            get!(nested, L, Dict{Int, Dict{Float64, Dict{Float64, Vector{Float64}}}}())
+            get!(nested[L], D, Dict{Float64, Dict{Float64, Vector{Float64}}}())
+            get!(nested[L][D], R, Dict{Float64, Vector{Float64}}())
+            get!(nested[L][D][R], ang, Float64[])
+            push!(nested[L][D][R][ang], μ)
         end
     end
-    # average per R across seeds
+    # average per R and angle across seeds
     for (L, dmap) in nested
         for (D, rmap) in dmap
-            for (R, vals) in collect(rmap)
-                rmap[R] = [mean(vals)]
+            for (R, angmap) in rmap
+                for (ang, vals) in collect(angmap)
+                    angmap[ang] = [mean(vals)]
+                end
             end
         end
     end
@@ -98,6 +109,7 @@ function plot_grid_by_LD(data_root::AbstractString = "data", out_dir::AbstractSt
     global_angles = collect(range(0, stop = pi/2, length = n_slices))
     pal = reverse([get(ColorSchemes.viridis, t) for t in range(0, stop = 1, length = n_slices)])
 
+    ### Plot mean
     plt = plot(layout = (nrows, ncols), size = (600*ncols, 500*nrows),
                left_margin = 25mm, right_margin = 10mm, top_margin = 5mm, bottom_margin = 5mm,
                tickfont = font(15), xtickfont = font(20), guidefont=font(15))
@@ -145,7 +157,8 @@ function plot_grid_by_LD(data_root::AbstractString = "data", out_dir::AbstractSt
                     end
                     found === nothing && continue
                     push!(xs, R)
-                    push!(ys, read_mean_certified(found))
+                    m = read_mean_certified(found)
+                    push!(ys, m[1])
                 end
                 isempty(xs) && continue
                 idx_col = findmin(abs.(global_angles .- ang))[2]
@@ -205,48 +218,63 @@ function plot_grid_by_R(data_root::AbstractString = "data", out_dir::AbstractStr
     end
     Rs = sort(collect(Rs_set))
     isempty(Rs) && return
+    # For each R, create one figure per R with rows = L and a single column.
+    # Within each subplot (fixed L) plot different D series together.
+    for mode in ["mean", "std"]
+        for R in Rs
+            nrows = max(1, length(Ls)); ncols = 1
+            plt = plot(layout = (nrows, ncols), size = (500, 400*nrows),
+                       left_margin = 25mm, right_margin = 10mm, top_margin = 10mm, bottom_margin = 10mm,
+                       xtickfont = font(18), tickfont = font(15), guidefont = font(16))
 
-    for R in Rs
-        nrows = max(1, length(Ls)); ncols = max(1, length(Ds))
-        plt = plot(layout = (nrows, ncols), size = (600*ncols, 500*nrows),
-                   left_margin = 25mm, right_margin = 10mm, top_margin = 10mm, bottom_margin = 10mm,
-                   xtickfont = font(18), tickfont = font(15), guidefont = font(16))
-
-        for (iL, L) in enumerate(Ls)
-            for (jD, D) in enumerate(Ds)
-                idx = (iL - 1) * ncols + jD
-                ax = plt[idx]
+            for (iL, L) in enumerate(Ls)
+                ax = plt[iL]
                 xlabel!(ax, "angle (rad)", fontsize=font(18))
-                ylabel!(ax, "p/q", fontsize=font(18))
-                title!(ax, @sprintf("L=%d  D=%d", L, D))
+                ylabel!(ax, @sprintf("%s p/q", mode), fontsize=font(18))
+                title!(ax, @sprintf("L=%d", L))
 
-                # gather angle -> mean for this L,D,R by scanning files under L/D
-                angles = Float64[]; means = Float64[]
-                sample_dir = joinpath(data_root, @sprintf("L%d", L), @sprintf("D%d", D))
-                for (root, dirs, files) in walkdir(sample_dir)
-                    occursin(@sprintf("R%d", Int(R)), root) || continue
-                    for f in files
-                        startswith(f, "stats_") || continue
-                        a = parse_angle_from_filename(basename(f))
-                        a === nothing && continue
-                        m = read_mean_certified(joinpath(root, f))
-                        isnan(m) && continue
-                        push!(angles, a); push!(means, m)
+                # For this L and R, plot series for each D on the same axes
+                any_plotted = false
+                for D in Ds
+                    # gather angle -> mean and std for this L,D,R by scanning files under L/D
+                    angles = Float64[]; means = Float64[]; stds = Float64[]
+                    sample_dir = joinpath(data_root, @sprintf("L%d", L), @sprintf("D%d", D))
+                    for (root, dirs, files) in walkdir(sample_dir)
+                        occursin(@sprintf("R%d", Int(R)), root) || continue
+                        for f in files
+                            startswith(f, "stats_") || continue
+                            a = parse_angle_from_filename(basename(f))
+                            a === nothing && continue
+                            m = read_mean_certified(joinpath(root, f))
+                            isnan(m[1]) && continue
+                            push!(angles, a); push!(means, m[1]); push!(stds, m[2])
+                        end
                     end
+                    isempty(angles) && continue
+                    order = sortperm(angles)
+                    a_s = angles[order]
+                    if mode == "mean"
+                        y_s = means[order]
+                        plot!(ax, a_s, y_s, label = @sprintf("D=%d", D), marker = :circle)
+                        plot!(ax, yscale = :log10, ylim = (1e-1, 1e3))
+                    else
+                        y_s = stds[order]
+                        plot!(ax, a_s, y_s, label = @sprintf("D=%d", D), marker = :circle)
+                        plot!(ax, ylim = (0, 0.5))
+                    end
+                    any_plotted = true
                 end
 
-                isempty(angles) && continue
-                order = sortperm(angles)
-                a_s = angles[order]; m_s = means[order]
-                plot!(ax, a_s, m_s, label = false, marker = :circle)
-                plot!(ax, yscale = :log10, ylim = (1e-1, 1e3))
-                plot!(ax, xlim = (0, pi/2), xticks = ([0, pi/4, pi/2], [L"0", L"\frac{\pi}{4}", L"\frac{\pi}{2}"]))
+                if any_plotted
+                    plot!(ax, xlim = (0, pi/2), xticks = ([0, pi/4, pi/2], [L"0", L"\frac{\pi}{4}", L"\frac{\pi}{2}"]))
+                    plot!(ax, legend = :best)
+                end
             end
-        end
 
-        outpng = joinpath(out_dir, @sprintf("certify_byR_R%d.png", Int(R)))
-        savefig(plt, outpng)
-        println("Saved: ", outpng)
+            outpng = joinpath(out_dir, @sprintf("%s_R%d.png", mode, Int(R)))
+            savefig(plt, outpng)
+            println("Saved: ", outpng)
+        end
     end
 end
 
@@ -257,6 +285,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
     end
     data_root = ARGS[1]
     out_dir = length(ARGS) >= 2 ? ARGS[2] : "figures"
-    plot_grid_by_LD(data_root, out_dir)
+    # plot_grid_by_LD(data_root, out_dir)
     plot_grid_by_R(data_root, out_dir)
 end

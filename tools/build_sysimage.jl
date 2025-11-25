@@ -2,10 +2,10 @@
 using Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
 try
-    proj = Pkg.project()
-    println("Project: ", get(proj, "name", "(unknown)"))
+	proj = Pkg.project()
+	println("Project: ", get(proj, "name", "(unknown)"))
 catch
-    println("Project: (unable to read project metadata)")
+	println("Project: (unable to read project metadata)")
 end
 
 using PackageCompiler
@@ -18,18 +18,22 @@ println("Precompile execution file: ", precompile_file)
 
 # List of modules to include in the sysimage. Adjust if you want fewer/more.
 mods = [
-    :TensorNetworkQuantumSimulator,
-    :ITensors,
-    :ITensorNetworks,
-    :CUDA,
-    :NamedGraphs,
-    :Graphs,
-    :Dictionaries,
-    :Measures,
-    :Plots
+	:TensorNetworkQuantumSimulator,
+	:ITensors,
+	:ITensorNetworks,
+	:CUDA,
+	:NamedGraphs,
+	:Graphs,
+	:Dictionaries,
+	:Measures,
+	:Plots,
+	:Adapt,
+	:ColorSchemes,
+	:JSON3,
+	:LaTeXStrings,
 ]
 
 # Create sysimage (this can take many minutes). The function will print progress.
-PackageCompiler.create_sysimage(mods; sysimage_path=sysimage_path, precompile_execution_file=precompile_file)
+PackageCompiler.create_sysimage(mods; sysimage_path = sysimage_path, precompile_execution_file = precompile_file)
 
 println("Sysimage creation finished: ", sysimage_path)
