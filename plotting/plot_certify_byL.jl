@@ -266,7 +266,7 @@ function plot_grid_by_R(data_root::AbstractString = "data", out_dir::AbstractStr
                 end
 
                 if any_plotted
-                    plot!(ax, xlim = (0, pi/2), xticks = ([0, pi/4, pi/2], [L"0", L"\frac{\pi}{4}", L"\frac{\pi}{2}"]))
+                    plot!(ax, xlim = (0, pi/2), xticks = ([0, pi/4, pi/2], [L"0", L"\frac{\pi}{8}", L"\frac{\pi}{4}"]))
                     plot!(ax, legend = :best)
                 end
             end
@@ -285,6 +285,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
     end
     data_root = ARGS[1]
     out_dir = length(ARGS) >= 2 ? ARGS[2] : "figures"
-    # plot_grid_by_LD(data_root, out_dir)
+    plot_grid_by_LD(data_root, out_dir)
     plot_grid_by_R(data_root, out_dir)
 end

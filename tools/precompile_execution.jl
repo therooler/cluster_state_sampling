@@ -4,14 +4,12 @@ try
     using TensorNetworkQuantumSimulator
     using ITensors
     using ITensorNetworks
-    using CUDA
     using NamedGraphs
     using Graphs
     using Dictionaries
     using Measures
     using Plots
     using PackageCompiler
-    using Adapt
 	using ColorSchemes
 	using JSON3
 	using LaTeXStrings
